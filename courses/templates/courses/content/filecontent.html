@@ -1,5 +1,9 @@
+{# courses/templates/courses/content/filecontent.html #}
 <a href="{{ item.file.url }}" download class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">
     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l3-3m-3 3l-3-3m-3 8h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-    Download File: {{ item.file.name|split:'/'|last }}
+    Download File: {{ item.filename }} {# CHANGED: Using the new 'filename' property #}
 </a>
-<p class="text-sm text-gray-500 mt-2">File type: {{ item.file.url|cut:'.'|slice:'-1:' }} ({{ item.file.size|filesizeformat }})</p>
+<p class="text-sm text-gray-500 mt-2">
+    File type: {{ item.file_extension }} {# CHANGED: Using the new 'file_extension' property #}
+    ({{ item.file.size|filesizeformat }})
+</p>

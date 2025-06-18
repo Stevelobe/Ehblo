@@ -1,42 +1,46 @@
 # courses/forms.py
 from django import forms
-from django.forms import inlineformset_factory
 from .models import Course, Module, Content, TextContent, VideoContent, ImageContent, FileContent, Subject
 from taggit.forms import TagWidget # Import TagWidget for better tag display/input
 
+# --- Helper for consistent styling ---
+def apply_common_widget_attrs(widget):
+    """Applies common TailwindCSS classes to form widgets."""
+    if 'class' not in widget.attrs:
+        widget.attrs['class'] = ''
+    # Append common classes if they aren't already present
+    common_classes = 'w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500'
+    for cls in common_classes.split():
+        if cls not in widget.attrs['class']:
+            widget.attrs['class'] += f' {cls}'
+    widget.attrs['class'] = widget.attrs['class'].strip() # Clean up any leading/trailing spaces
+
+
+# --- Course Forms ---
 class CourseForm(forms.ModelForm):
     class Meta:
         model = Course
-        # ADDED 'image' to the fields list
         fields = ['subject', 'title', 'slug', 'overview', 'price', 'is_published', 'tags', 'image']
         widgets = {
-            'overview': forms.Textarea(attrs={'rows': 5, 'class': 'w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500'}),
-            'slug': forms.TextInput(attrs={'placeholder': 'Auto-generated if left blank', 'class': 'w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500'}),
-            'title': forms.TextInput(attrs={'class': 'w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500'}),
-            'price': forms.NumberInput(attrs={'class': 'w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500'}),
+            'overview': forms.Textarea(attrs={'rows': 5}),
+            'slug': forms.TextInput(attrs={'placeholder': 'Auto-generated if left blank'}),
+            'title': forms.TextInput(),
+            'price': forms.NumberInput(),
             'is_published': forms.CheckboxInput(attrs={'class': 'form-checkbox h-5 w-5 text-purple-600'}),
-            # Using TagWidget for tags for better visual and functionality if you're using django-taggit's default JS
-            'tags': TagWidget(attrs={'class': 'w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500', 'placeholder': 'Enter tags separated by commas'}),
-            # NEW: Widget for the image field to give it a file input look
+            'tags': TagWidget(attrs={'placeholder': 'Enter tags separated by commas'}),
             'image': forms.ClearableFileInput(attrs={'class': 'block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100'}),
+            'subject': forms.Select(attrs={'class': 'block appearance-none w-full bg-white border border-gray-300 text-gray-700 py-2 px-3 pr-8 rounded-md leading-tight focus:outline-none focus:bg-white focus:border-purple-500'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Ensure 'tags' field is handled correctly by django-taggit
-        self.fields['tags'].required = False # Make tags optional
+        self.fields['tags'].required = False
 
-        # Apply common styling to fields that don't have specific widgets yet
-        # This is a more robust way to apply classes to all text/number/select inputs
+        # Apply common styling to various input types, excluding those with specific custom widgets
         for field_name, field in self.fields.items():
-            if isinstance(field.widget, (forms.TextInput, forms.NumberInput, forms.Textarea, forms.Select)):
-                if 'class' in field.widget.attrs:
-                    field.widget.attrs['class'] += ' w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500'
-                else:
-                    field.widget.attrs['class'] = 'w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500'
-            # Specific styling for the subject dropdown
-            if field_name == 'subject':
-                field.widget.attrs.update({'class': 'block appearance-none w-full bg-white border border-gray-300 text-gray-700 py-2 px-3 pr-8 rounded-md leading-tight focus:outline-none focus:bg-white focus:border-purple-500'})
+            if field_name not in ['is_published', 'image', 'subject']:
+                if isinstance(field.widget, (forms.TextInput, forms.NumberInput, forms.Textarea, forms.Select, TagWidget)):
+                    apply_common_widget_attrs(field.widget)
 
 
 class ModuleForm(forms.ModelForm):
@@ -44,10 +48,16 @@ class ModuleForm(forms.ModelForm):
         model = Module
         fields = ['title', 'description', 'order']
         widgets = {
-            'title': forms.TextInput(attrs={'class': 'w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500'}),
-            'description': forms.Textarea(attrs={'rows': 3, 'class': 'w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500'}),
-            'order': forms.NumberInput(attrs={'min': 0, 'class': 'w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500'}),
+            'title': forms.TextInput(),
+            'description': forms.Textarea(attrs={'rows': 3}),
+            'order': forms.NumberInput(attrs={'min': 0}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            if isinstance(field.widget, (forms.TextInput, forms.NumberInput, forms.Textarea)):
+                apply_common_widget_attrs(field.widget)
 
     def clean_order(self):
         order = self.cleaned_data.get('order')
@@ -58,22 +68,53 @@ class ModuleForm(forms.ModelForm):
         return order
 
 
-# Forms for different content types
+# --- Consolidated and Corrected Content Forms ---
+# This is the ContentForm that should be used everywhere for Content objects
+class ContentForm(forms.ModelForm):
+    class Meta:
+        model = Content
+        # Correct fields for the Content object (module, title, order)
+        fields = ['module', 'title', 'order']
+        widgets = {
+            'title': forms.TextInput(),
+            'order': forms.NumberInput(attrs={'min': 0}),
+            'module': forms.Select(), # Module field is a Select widget
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            if field_name == 'module':
+                field.widget.attrs.update({'class': 'block appearance-none w-full bg-white border border-gray-300 text-gray-700 py-2 px-3 pr-8 rounded-md leading-tight focus:outline-none focus:bg-white focus:border-purple-500'})
+            else: # Apply common styling to title and order fields
+                 apply_common_widget_attrs(field.widget)
+
+
 class TextContentForm(forms.ModelForm):
     class Meta:
         model = TextContent
-        fields = ['content']
+        # CORRECTED FIELD NAME: 'content' to 'text'
+        fields = ['text']
         widgets = {
-            'content': forms.Textarea(attrs={'rows': 10, 'class': 'w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500'}),
+            'text': forms.Textarea(attrs={'rows': 10}),
         }
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_common_widget_attrs(self.fields['text'].widget)
+
 
 class VideoContentForm(forms.ModelForm):
     class Meta:
         model = VideoContent
-        fields = ['video_url']
+        # CORRECTED FIELD NAME: 'video_url' to 'url'
+        fields = ['url']
         widgets = {
-            'video_url': forms.URLInput(attrs={'class': 'w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500', 'placeholder': 'Paste YouTube, Vimeo, or direct video URL'}),
+            'url': forms.URLInput(attrs={'placeholder': 'Paste YouTube, Vimeo, or direct video URL'}),
         }
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_common_widget_attrs(self.fields['url'].widget)
+
 
 class ImageContentForm(forms.ModelForm):
     class Meta:
@@ -82,6 +123,8 @@ class ImageContentForm(forms.ModelForm):
         widgets = {
             'image': forms.ClearableFileInput(attrs={'class': 'block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100'}),
         }
+    # No common styling applied here, as ClearableFileInput has its own specific styling.
+
 
 class FileContentForm(forms.ModelForm):
     class Meta:
@@ -90,13 +133,4 @@ class FileContentForm(forms.ModelForm):
         widgets = {
             'file': forms.ClearableFileInput(attrs={'class': 'block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100'}),
         }
-
-
-class ContentForm(forms.ModelForm):
-    class Meta:
-        model = Content
-        fields = ['title', 'order']
-        widgets = {
-            'title': forms.TextInput(attrs={'class': 'w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500'}),
-            'order': forms.NumberInput(attrs={'min': 0, 'class': 'w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500'}),
-        }
+    # No common styling applied here, as ClearableFileInput has its own specific styling.

@@ -5,6 +5,14 @@ from taggit.managers import TaggableManager
 from django.template.loader import render_to_string
 from django.utils.text import slugify
 
+# Imports for GenericForeignKey and aggregate functions (important!)
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.db.models import Count, Max # <--- Make sure these are here
+
+import os # ADD THIS IMPORT! This is necessary for os.path.basename and os.path.splitext
+
+
 class Subject(models.Model):
     name = models.CharField(max_length=200, unique=True)
     slug = models.SlugField(max_length=200, unique=True, blank=True)
@@ -26,8 +34,8 @@ class Course(models.Model):
                                    related_name='courses_created',
                                    limit_choices_to={'user_type': 'instructor'})
     subject = models.ForeignKey(Subject,
-                                 on_delete=models.CASCADE,
-                                 related_name='courses')
+                                  on_delete=models.CASCADE,
+                                  related_name='courses')
     title = models.CharField(max_length=250)
     slug = models.SlugField(max_length=250, unique=True, blank=True)
     overview = models.TextField()
@@ -39,7 +47,6 @@ class Course(models.Model):
 
     # ADD THIS LINE FOR THE COURSE THUMBNAIL IMAGE
     image = models.ImageField(upload_to='course_thumbnails/', null=True, blank=True)
-    # 'course_thumbnails/' will be a subfolder inside your MEDIA_ROOT (e.g., ehblo_project/media/course_thumbnails/)
 
     class Meta:
         ordering = ('-created',)
@@ -73,9 +80,6 @@ class Module(models.Model):
         return f'{self.order}. {self.title}'
 
 
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes.fields import GenericForeignKey
-
 class Content(models.Model):
     module = models.ForeignKey(Module,
                                on_delete=models.CASCADE,
@@ -98,52 +102,75 @@ class Content(models.Model):
     class Meta:
         ordering = ('order',)
         unique_together = ('module', 'order')
+        verbose_name_plural = "Contents" # Added verbose_name_plural
 
     def __str__(self):
-        return f"{self.module.course.title} - {self.module.title} - {self.item.__class__.__name__}"
+        # Fallback for item if it's somehow None or doesn't have a __class__
+        item_name = self.item.__class__.__name__ if self.item else "Unknown Content Type"
+        return f"{self.module.course.title} - {self.module.title} - {item_name} ({self.title})"
 
     def render(self):
-        return render_to_string(f'courses/content/{self.item.__class__.__name__.lower()}.html', {'item': self.item})
+        # Safely get the lowercased model name for the template path
+        template_name = self.item.__class__.__name__.lower()
+        return render_to_string(f'courses/content/{template_name}.html', {'item': self.item})
 
 
 class TextContent(models.Model):
-    content = models.TextField()
+    # Field name changed from 'content' to 'text'
+    text = models.TextField(verbose_name="Text Content") # <--- CORRECTED LINE
 
     class Meta:
         verbose_name_plural = "Text Contents"
+        verbose_name = "Text Content"
     def __str__(self):
-        return "Text Content"
+        return f"Text Content (ID: {self.id})"
 
 class VideoContent(models.Model):
-    video_url = models.URLField(help_text="Paste YouTube, Vimeo, or direct video URL.")
+    # Field name changed from 'video_url' to 'url'
+    url = models.URLField(help_text="Paste YouTube, Vimeo, or direct video URL.", verbose_name="Video URL") # <--- CORRECTED LINE
 
     class Meta:
         verbose_name_plural = "Video Contents"
+        verbose_name = "Video Content"
     def __str__(self):
-        return "Video Content"
+        return f"Video Content (ID: {self.id})"
 
 class ImageContent(models.Model):
-    image = models.ImageField(upload_to='course_images/') # This is for images *within* modules
+    image = models.ImageField(upload_to='course_images/', verbose_name="Image File")
 
     class Meta:
         verbose_name_plural = "Image Contents"
+        verbose_name = "Image Content"
     def __str__(self):
-        return "Image Content"
+        return f"Image Content (ID: {self.id})"
 
 class FileContent(models.Model):
-    file = models.FileField(upload_to='course_files/')
+    file = models.FileField(upload_to='course_files/', verbose_name="File Attachment")
 
     class Meta:
         verbose_name_plural = "File Contents"
+        verbose_name = "File Content"
     def __str__(self):
-        return "File Content"
+        return f"File Content (ID: {self.id})"
+
+    # ADD THESE TWO PROPERTIES!
+    @property
+    def filename(self):
+        """Returns just the filename from the path (e.g., 'document.pdf' from 'uploads/files/document.pdf')."""
+        return os.path.basename(self.file.name)
+
+    @property
+    def file_extension(self):
+        """Returns the file extension (e.g., 'pdf' from 'document.pdf')."""
+        name, extension = os.path.splitext(self.file.name)
+        return extension.lstrip('.').lower() # Remove the leading dot and make it lowercase
 
 
 class Enrollment(models.Model):
     student = models.ForeignKey(settings.AUTH_USER_MODEL,
-                                 on_delete=models.CASCADE,
-                                 related_name='enrollments',
-                                 limit_choices_to={'user_type': 'student'})
+                                   on_delete=models.CASCADE,
+                                   related_name='enrollments',
+                                   limit_choices_to={'user_type': 'student'})
     course = models.ForeignKey(Course,
                                on_delete=models.CASCADE,
                                related_name='enrollments')
@@ -152,12 +179,14 @@ class Enrollment(models.Model):
 
     class Meta:
         unique_together = ('student', 'course')
+        verbose_name_plural = "Enrollments"
 
     def __str__(self):
         return f'{self.student.username} enrolled in {self.course.title}'
 
     def get_progress(self):
-        total_contents = self.course.modules.aggregate(total=models.Count('contents'))['total']
+        # Using Count imported directly from django.db.models
+        total_contents = self.course.modules.aggregate(total=Count('contents'))['total']
         if not total_contents:
             return 0
         completed_count = self.completed_contents.count()

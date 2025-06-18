@@ -1,0 +1,113 @@
+{# courses/templates/courses/manage/content_update.html #}
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Edit {{ model_name|capfirst }}{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto bg-white p-8 rounded-lg shadow-md mt-10">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Edit {{ model_name|capfirst }}</h1>
+    <p class="text-gray-600 mb-4">Module: {{ module.title }} (Course: {{ module.course.title }})</p>
+
+    {# Form for updating Content details and specific content item #}
+    {# IMPORTANT: enctype="multipart/form-data" is required for file uploads #}
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+
+        {# Section for Content Details (Module, Title, Order) #}
+        <div class="border border-gray-300 rounded-lg p-4">
+            <h2 class="text-xl font-semibold text-gray-800 mb-3">Content Details (Module, Title, Order)</h2>
+            {% if content_form.errors %}
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                    <strong class="font-bold">Error!</strong>
+                    <span class="block sm:inline">Please correct the following errors for Content Details:</span>
+                    <ul class="mt-2 list-disc list-inside">
+                        {% for field, errors in content_form.errors.items %}
+                            <li>{{ field.label|capfirst }}: {{ errors|join:", " }}</li>
+                        {% endfor %}
+                        {% if content_form.non_field_errors %}
+                            {% for error in content_form.non_field_errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        {% endif %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            {# Loop through and render fields from ContentForm #}
+            {% for field in content_form %}
+                <div class="mb-4">
+                    <label for="{{ field.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">
+                        {{ field.label }}
+                    </label>
+                    {{ field }} {# This renders the input/select field #}
+                    {% if field.help_text %}
+                        <p class="text-gray-600 text-xs italic mt-1">{{ field.help_text }}</p>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <p class="text-red-500 text-xs italic">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+
+        {# Section for Specific Content Type Details (e.g., Image field for ImageContent) #}
+        <div class="border border-gray-300 rounded-lg p-4">
+            <h2 class="text-xl font-semibold text-gray-800 mb-3">{{ model_name|capfirst }} Specifics</h2>
+            {% if item_form.errors %}
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                    <strong class="font-bold">Error!</strong>
+                    <span class="block sm:inline">Please correct the following errors for {{ model_name|capfirst }} Specifics:</span>
+                    <ul class="mt-2 list-disc list-inside">
+                        {% for field, errors in item_form.errors.items %}
+                            <li>{{ field.label|capfirst }}: {{ errors|join:", " }}</li>
+                        {% endfor %}
+                         {% if item_form.non_field_errors %}
+                            {% for error in item_form.non_field_errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        {% endif %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            {# Loop through and render fields from the specific content type form (item_form) #}
+            {% for field in item_form %}
+                <div class="mb-4">
+                    <label for="{{ field.id_for_label }}" class="block text-gray-700 text-sm font-bold mb-2">
+                        {{ field.label }}
+                    </label>
+                    {{ field }} {# This renders the input/file field #}
+                    {% if field.help_text %}
+                        <p class="text-gray-600 text-xs italic mt-1">{{ field.help_text }}</p>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <p class="text-red-500 text-xs italic">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {# For file fields, display current file if exists #}
+                {% if field.name == 'image' and item.image %}
+                    <div class="mb-4">
+                        <p class="text-gray-700 text-sm mb-2">Current Image:</p>
+                        <img src="{{ item.image.url }}" alt="Current Image" class="max-w-xs h-auto rounded-lg shadow-md border border-gray-200">
+                    </div>
+                {% elif field.name == 'file' and item.file %}
+                     <div class="mb-4">
+                        <p class="text-gray-700 text-sm mb-2">Current File: <a href="{{ item.file.url }}" target="_blank" class="text-blue-500 hover:underline">{{ item.file.name }}</a></p>
+                    </div>
+                {% elif field.name == 'url' and item.url %}
+                     <div class="mb-4">
+                        <p class="text-gray-700 text-sm mb-2">Current URL: <a href="{{ item.url }}" target="_blank" class="text-blue-500 hover:underline">{{ item.url }}</a></p>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-300 shadow-md">
+            Save Changes
+        </button>
+        <a href="{% url 'course_detail' module.course.pk module.course.slug %}" class="ml-4 text-gray-600 hover:underline">Cancel</a>
+    </form>
+</div>
+{% endblock %}

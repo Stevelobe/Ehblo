@@ -31,8 +31,7 @@
                                 {% endif %}
                                 <a href="{% url 'course_player_content' enrollment.pk module.pk content.pk %}"
                                    class="text-gray-700 hover:text-blue-600 {% if selected_content.pk == content.pk %}font-bold text-blue-600{% endif %}">
-                                    
-                                
+                                    {{ content.title }} {# Added content.title here #}
                                 </a>
                             </li>
                         {% endfor %}
@@ -42,16 +41,37 @@
         </ul>
     </aside>
 
-    <main class="flex-grow bg-white p-8 shadow-lg rounded-lg">
+    <main class="flex-grow bg-white p-8 shadow-lg rounded-lg relative"> {# ADDED relative HERE #}
         {% if selected_content %}
-            <h1 class="text-3xl font-bold text-gray-900 mb-6">
-                {% if selected_content.title %}{{ selected_content.title }}{% else %}
-                
-                {% endif %}
+            <h1 class="text-3xl font-bold text-gray-900 mb-4">
+                {{ selected_content.title|default:"Content Title" }} {# Added default filter #}
             </h1>
-            <div class="content-display space-y-4 text-gray-800 leading-relaxed">
-                
+
+            <div class="content-display space-y-4 text-gray-800 leading-relaxed pb-20"> {# Added pb-20 to ensure space for the button #}
+                {{ selected_content.render|safe }}
             </div>
+
+            {# MARK/UNMARK AS COMPLETE BUTTONS - MOVED TO HERE #}
+            <div class="absolute bottom-4 right-4 z-10"> {# Absolute positioning applied here #}
+                {% if selected_content.id in completed_content_ids %}
+                    <form action="{% url 'unmark_content_as_complete' enrollment.pk selected_module.pk selected_content.pk %}" method="post" class="inline-block">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-50 flex items-center space-x-2 shadow-lg">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>
+                            <span>Unmark Complete</span>
+                        </button>
+                    </form>
+                {% else %}
+                    <form action="{% url 'mark_content_as_complete' enrollment.pk selected_module.pk selected_content.pk %}" method="post" class="inline-block">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 flex items-center space-x-2 shadow-lg">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                            <span>Mark as Complete</span>
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+
         {% else %}
             <div class="flex flex-col items-center justify-center h-full text-gray-600">
                 <p class="text-xl">Select a module and content from the sidebar to start learning!</p>

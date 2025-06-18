@@ -1,7 +1,6 @@
-{# courses/templates/courses/course_detail.html #}
 {% extends "base.html" %}
 {% load static %}
-{% load courses_extras %} {# Make sure you have this line to load your custom filter #}
+{% load courses_extras %} {# Make sure this line is present to use custom filters #}
 
 {% block title %}{{ course.title }}{% endblock %}
 
@@ -42,13 +41,11 @@
     {% if user.is_authenticated %}
         <div class="mb-6 text-center">
             {% if user == course.instructor and user.user_type == 'instructor' %}
-                {# Instructor always sees the chat link for their own courses #}
                 <a href="{% url 'course_chat_detail' course.id %}"
                    class="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition duration-300 shadow-md">
                     Go to Course Chat (Instructor)
                 </a>
             {% elif user.user_type == 'student' and user_is_enrolled %}
-                {# Enrolled students see the chat link #}
                 <a href="{% url 'course_chat_detail' course.id %}"
                    class="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition duration-300 shadow-md">
                     Join Course Chat
@@ -90,22 +87,57 @@
                     {% if module.contents.all %}
                         <ul class="list-disc pl-5 text-gray-700">
                             {% for content in module.contents.all %}
-                                <li class="mb-1 flex justify-between items-center">
-                                    <span>
+                                <li class="mb-1 flex justify-between items-center flex-wrap"> {# Added flex-wrap for better layout #}
+                                    <span class="flex-grow"> {# Allows title/preview to take available space #}
                                         {# Display content title and link it for enrolled students #}
                                         {% if user.is_authenticated and user.user_type == 'student' and user_is_enrolled %}
                                             <a href="{% url 'course_player_content' enrollment.pk module.pk content.pk %}" class="text-blue-700 hover:underline font-medium">
                                                 {{ content.order }}. {{ content.title }}
                                             </a>
                                         {% else %}
-                                            {{ content.order }}. {{ content.title }}
+                                            {# Non-enrolled/guests/instructors without enrollment see just the title #}
+                                            <span class="font-medium">{{ content.order }}. {{ content.title }}</span>
                                         {% endif %}
+
+                                        {# --- NEW: Display actual content preview here based on type --- #}
+                                        {% if content.item %}
+                                            {% if content.item|lower_class_name == 'imagecontent' %}
+                                                <div class="ml-4 my-2">
+                                                    <img src="{{ content.item.image.url }}" alt="{{ content.title }}" class="max-w-xs h-auto rounded-lg shadow-md border border-gray-200">
+                                                </div>
+                                            {% elif content.item|lower_class_name == 'textcontent' %}
+                                                <div class="ml-4 my-2 text-gray-700 text-sm italic">
+                                                    <p>{{ content.item.text|truncatechars:150|safe }}</p> {# Display first 150 chars of text #}
+                                                </div>
+                                            {% elif content.item|lower_class_name == 'videocontent' %}
+                                                <div class="ml-4 my-2 text-gray-700 text-sm italic">
+                                                    <p>Video: <a href="{{ content.item.url }}" target="_blank" class="text-blue-500 hover:underline">{{ content.item.url|truncatechars:50 }}</a></p>
+                                                </div>
+                                            {% elif content.item|lower_class_name == 'filecontent' %}
+                                                <div class="ml-4 my-2 text-gray-700 text-sm italic">
+                                                    <p>File: <a href="{{ content.item.file.url }}" target="_blank" class="text-blue-500 hover:underline">{{ content.item.file.name|split_filename }}</a></p>
+                                                </div>
+                                            {% else %}
+                                                <div class="ml-4 my-2 text-gray-500 text-xs">
+                                                    (Content Type: {{ content.item|lower_class_name }})
+                                                </div>
+                                            {% endif %}
+                                        {% else %}
+                                            <div class="ml-4 my-2 text-red-500 text-xs">
+                                                (Content data missing or corrupted)
+                                            </div>
+                                        {% endif %}
+                                        {# --- END NEW --- #}
+
                                     </span>
                                     {% if user.is_authenticated and user.user_type == 'instructor' and course.instructor == user %}
-                                        <div class="flex space-x-2 text-sm">
-                                            {# Add edit link for content for instructors #}
-                                            <a href="{% url 'module_content_update' module.pk content.pk content.item|lower_class_name %}"
-                                               class="text-blue-500 hover:underline">Edit</a>
+                                        <div class="flex space-x-2 text-sm ml-auto"> {# Used ml-auto to push buttons to right #}
+                                            {% if content.item %}
+                                                <a href="{% url 'module_content_update' module.pk content.pk content.item|lower_class_name %}"
+                                                   class="text-blue-500 hover:underline">Edit</a>
+                                            {% else %}
+                                                <span class="text-red-500" title="Content data missing or corrupted">Edit (N/A)</span>
+                                            {% endif %}
                                             <a href="{% url 'content_delete' content.pk %}" class="text-red-500 hover:underline">Delete</a>
                                         </div>
                                     {% endif %}
@@ -113,7 +145,7 @@
                             {% endfor %}
                             {% if user.is_authenticated and user.user_type == 'instructor' and course.instructor == user %}
                                 <li class="mt-2">
-                                    <a href="{% url 'content_order' module.pk %}" class="text-blue-500 hover:underline text-sm">Reorder Contents (Advanced)</a>
+                                    {# Reordering link (if implemented with JS) #}
                                 </li>
                             {% endif %}
                         </ul>
@@ -137,7 +169,6 @@
             <form action="{% url 'enroll_course' course.pk %}" method="post">
                 {% csrf_token %}
                 <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition duration-300">
-                    {# Simplified button text, as payment is no longer required #}
                     Enroll Now
                 </button>
             </form>
