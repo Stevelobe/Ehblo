@@ -18,11 +18,6 @@ from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.http import JsonResponse, Http404
 
-# Remove 'from courses import models' if you're not using 'models.Course' directly.
-# You already have 'from .models import ...' at the top, which is preferred.
-# If you don't remove it and it's not used, it won't cause an error, but it's redundant.
-# from courses import models
-
 
 # Mixins for permissions
 class InstructorRequiredMixin(UserPassesTestMixin):
@@ -91,6 +86,18 @@ class CourseListView(ListView):
         # Only show published courses
         queryset = super().get_queryset().filter(is_published=True)
 
+        # --- NEW ADDITION: Filter by User's Pedagogic Level ---
+        user = self.request.user
+        if user.is_authenticated and user.pedagogic_level:
+            # Filter for courses matching user's level OR 'general' level
+            queryset = queryset.filter(
+                Q(pedagogic_level=user.pedagogic_level) | Q(pedagogic_level='general')
+            )
+        else:
+            # For guest users or users without a level, only show 'general' courses
+            queryset = queryset.filter(pedagogic_level='general')
+        # --- END NEW ADDITION ---
+
         # Filter by subject
         subject_slug = self.kwargs.get('subject_slug')
         if subject_slug:
@@ -114,6 +121,13 @@ class CourseListView(ListView):
         context['subjects'] = Subject.objects.annotate(total_courses=Count('courses', filter=Q(courses__is_published=True)))
         context['current_subject_slug'] = self.kwargs.get('subject_slug')
         context['query'] = self.request.GET.get('q', '')
+
+        # --- NEW ADDITION: Pass IDs of displayed courses for recommendations ---
+        # This list will be used by the 'show_recommended_courses' template tag
+        # to ensure recommendations don't duplicate courses already shown on the page.
+        context['displayed_course_ids'] = list(self.get_queryset().values_list('id', flat=True))
+        # --- END NEW ADDITION ---
+
         return context
 
 
@@ -278,7 +292,7 @@ class ModuleContentCreateUpdateView(LoginRequiredMixin, InstructorRequiredMixin,
             # Ensure the fetched item's model name matches the URL's model_name
             if content_obj.item.__class__.__name__.lower() != model_name:
                 messages.error(request, 'Mismatch between content type in URL and existing content.')
-                return redirect(reverse_lazy('course_detail', kwargs={'pk': module.course.pk}))
+                return redirect(reverse_lazy('course_detail', kwargs={'pk': module.course.pk, 'slug': module.course.slug}))
 
             content_item = content_obj.item # Get the actual TextContent, VideoContent etc. object
             item_form = self.get_content_form_class(model_name)(instance=content_item)

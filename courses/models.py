@@ -5,12 +5,12 @@ from taggit.managers import TaggableManager
 from django.template.loader import render_to_string
 from django.utils.text import slugify
 
-# Imports for GenericForeignKey and aggregate functions (important!)
+# Imports for GenericForeignKey and aggregate functions
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
-from django.db.models import Count, Max # <--- Make sure these are here
+from django.db.models import Count, Max
 
-import os # ADD THIS IMPORT! This is necessary for os.path.basename and os.path.splitext
+import os # This is necessary for os.path.basename and os.path.splitext
 
 
 class Subject(models.Model):
@@ -45,8 +45,24 @@ class Course(models.Model):
     is_published = models.BooleanField(default=False)
     tags = TaggableManager(blank=True)
 
-    # ADD THIS LINE FOR THE COURSE THUMBNAIL IMAGE
+    # Course thumbnail image
     image = models.ImageField(upload_to='course_thumbnails/', null=True, blank=True)
+
+    # --- NEW ADDITION for Pedagogic Level ---
+    PEDAGOGIC_LEVEL_CHOICES = [
+        ('primary', 'Primary School'),
+        ('secondary', 'Secondary School'),
+        ('university', 'University'),
+        ('adult', 'Adult Education'),
+        ('general', 'General / All Levels'), # For courses that can apply to any level
+    ]
+    pedagogic_level = models.CharField(
+        max_length=20,
+        choices=PEDAGOGIC_LEVEL_CHOICES,
+        default='general', # Default to general if not specified
+        help_text="Target pedagogic level for this course."
+    )
+    # --- END NEW ADDITION ---
 
     class Meta:
         ordering = ('-created',)
@@ -116,8 +132,7 @@ class Content(models.Model):
 
 
 class TextContent(models.Model):
-    # Field name changed from 'content' to 'text'
-    text = models.TextField(verbose_name="Text Content") # <--- CORRECTED LINE
+    text = models.TextField(verbose_name="Text Content")
 
     class Meta:
         verbose_name_plural = "Text Contents"
@@ -126,8 +141,7 @@ class TextContent(models.Model):
         return f"Text Content (ID: {self.id})"
 
 class VideoContent(models.Model):
-    # Field name changed from 'video_url' to 'url'
-    url = models.URLField(help_text="Paste YouTube, Vimeo, or direct video URL.", verbose_name="Video URL") # <--- CORRECTED LINE
+    url = models.URLField(help_text="Paste YouTube, Vimeo, or direct video URL.", verbose_name="Video URL")
 
     class Meta:
         verbose_name_plural = "Video Contents"
@@ -153,7 +167,6 @@ class FileContent(models.Model):
     def __str__(self):
         return f"File Content (ID: {self.id})"
 
-    # ADD THESE TWO PROPERTIES!
     @property
     def filename(self):
         """Returns just the filename from the path (e.g., 'document.pdf' from 'uploads/files/document.pdf')."""

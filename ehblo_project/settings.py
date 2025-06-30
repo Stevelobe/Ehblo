@@ -20,9 +20,9 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'default-insecure-key-for-dev-only')
 DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True' # Controlled by environment variable
 
 # RESOLVED MERGE CONFLICT BELOW THIS LINE
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0aee-41-202-207-5.ngrok-free.app', 'ehblo.onrender.com']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '7217-129-0-205-86.ngrok-free.app', 'ehblo.onrender.com']
 
-CSRF_TRUSTED_ORIGINS = ['https://0aee-41-202-207-5.ngrok-free.app', 'https://ehblo.onrender.com']
+CSRF_TRUSTED_ORIGINS = ['https://7217-129-0-205-86.ngrok-free.app', 'https://ehblo.onrender.com']
 # RESOLVED MERGE CONFLICT ABOVE THIS LINE
 
 # Application definition

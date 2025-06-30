@@ -20,7 +20,8 @@ def apply_common_widget_attrs(widget):
 class CourseForm(forms.ModelForm):
     class Meta:
         model = Course
-        fields = ['subject', 'title', 'slug', 'overview', 'price', 'is_published', 'tags', 'image']
+        # *** FIX HERE: ADD 'pedagogic_level' to the fields list ***
+        fields = ['subject', 'title', 'slug', 'overview', 'price', 'is_published', 'tags', 'image', 'pedagogic_level']
         widgets = {
             'overview': forms.Textarea(attrs={'rows': 5}),
             'slug': forms.TextInput(attrs={'placeholder': 'Auto-generated if left blank'}),
@@ -30,6 +31,8 @@ class CourseForm(forms.ModelForm):
             'tags': TagWidget(attrs={'placeholder': 'Enter tags separated by commas'}),
             'image': forms.ClearableFileInput(attrs={'class': 'block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100'}),
             'subject': forms.Select(attrs={'class': 'block appearance-none w-full bg-white border border-gray-300 text-gray-700 py-2 px-3 pr-8 rounded-md leading-tight focus:outline-none focus:bg-white focus:border-purple-500'}),
+            # Ensure pedagogic_level widget also applies common styles, though the __init__ also handles it
+            'pedagogic_level': forms.Select(attrs={'class': 'block appearance-none w-full bg-white border border-gray-300 text-gray-700 py-2 px-3 pr-8 rounded-md leading-tight focus:outline-none focus:bg-white focus:border-purple-500'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -37,10 +40,15 @@ class CourseForm(forms.ModelForm):
         self.fields['tags'].required = False
 
         # Apply common styling to various input types, excluding those with specific custom widgets
+        # Note: 'pedagogic_level' widget is already defined with specific classes above,
+        # but this loop will also ensure it gets common ones if not explicitly handled.
         for field_name, field in self.fields.items():
-            if field_name not in ['is_published', 'image', 'subject']:
+            if field_name not in ['is_published', 'image', 'subject', 'pedagogic_level']: # Add 'pedagogic_level' here to prevent double-styling if its widget defines specific classes.
                 if isinstance(field.widget, (forms.TextInput, forms.NumberInput, forms.Textarea, forms.Select, TagWidget)):
                     apply_common_widget_attrs(field.widget)
+            elif field_name == 'pedagogic_level' and 'class' not in field.widget.attrs:
+                # If pedagogic_level had no specific class, apply common ones
+                apply_common_widget_attrs(field.widget)
 
 
 class ModuleForm(forms.ModelForm):
@@ -69,16 +77,14 @@ class ModuleForm(forms.ModelForm):
 
 
 # --- Consolidated and Corrected Content Forms ---
-# This is the ContentForm that should be used everywhere for Content objects
 class ContentForm(forms.ModelForm):
     class Meta:
         model = Content
-        # Correct fields for the Content object (module, title, order)
         fields = ['module', 'title', 'order']
         widgets = {
             'title': forms.TextInput(),
             'order': forms.NumberInput(attrs={'min': 0}),
-            'module': forms.Select(), # Module field is a Select widget
+            'module': forms.Select(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -86,14 +92,13 @@ class ContentForm(forms.ModelForm):
         for field_name, field in self.fields.items():
             if field_name == 'module':
                 field.widget.attrs.update({'class': 'block appearance-none w-full bg-white border border-gray-300 text-gray-700 py-2 px-3 pr-8 rounded-md leading-tight focus:outline-none focus:bg-white focus:border-purple-500'})
-            else: # Apply common styling to title and order fields
-                 apply_common_widget_attrs(field.widget)
+            else:
+                apply_common_widget_attrs(field.widget)
 
 
 class TextContentForm(forms.ModelForm):
     class Meta:
         model = TextContent
-        # CORRECTED FIELD NAME: 'content' to 'text'
         fields = ['text']
         widgets = {
             'text': forms.Textarea(attrs={'rows': 10}),
@@ -106,7 +111,6 @@ class TextContentForm(forms.ModelForm):
 class VideoContentForm(forms.ModelForm):
     class Meta:
         model = VideoContent
-        # CORRECTED FIELD NAME: 'video_url' to 'url'
         fields = ['url']
         widgets = {
             'url': forms.URLInput(attrs={'placeholder': 'Paste YouTube, Vimeo, or direct video URL'}),
@@ -123,7 +127,6 @@ class ImageContentForm(forms.ModelForm):
         widgets = {
             'image': forms.ClearableFileInput(attrs={'class': 'block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100'}),
         }
-    # No common styling applied here, as ClearableFileInput has its own specific styling.
 
 
 class FileContentForm(forms.ModelForm):
@@ -133,4 +136,3 @@ class FileContentForm(forms.ModelForm):
         widgets = {
             'file': forms.ClearableFileInput(attrs={'class': 'block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100'}),
         }
-    # No common styling applied here, as ClearableFileInput has its own specific styling.

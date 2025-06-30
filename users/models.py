@@ -1,10 +1,11 @@
+# users/models.py
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 # Make sure your 'courses' app has a 'Subject' model defined.
 # If not, you'll need to create that model first or adjust 'interests'
 # to be a CharField with predefined choices if you don't want to link to Subjects.
-from courses.models import Subject 
+from courses.models import Subject
 
 class CustomUser(AbstractUser):
     USER_TYPE_CHOICES = (
@@ -17,19 +18,20 @@ class CustomUser(AbstractUser):
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     country = models.CharField(max_length=100, blank=True, null=True)
 
-    # --- New Fields for Pedagogic Level and Interests ---
+    # --- Updated Fields for Pedagogic Level and Interests ---
     PEDAGOGIC_LEVEL_CHOICES = [
-        ('primary', 'Primary'),
-        ('secondary', 'Secondary'),
+        ('primary', 'Primary School'),      # Renamed for clarity/consistency
+        ('secondary', 'Secondary School'),  # Renamed for clarity/consistency
         ('university', 'University'),
-        ('personal', 'Personal'),
+        ('adult', 'Adult Education'),      # Added: Covers post-university or non-formal adult learning
+        ('general', 'General / All Levels'), # ADDED: CRUCIAL for general recommendations
     ]
     pedagogic_level = models.CharField(
         max_length=20,
         choices=PEDAGOGIC_LEVEL_CHOICES,
-        blank=True,  # Allow it to be optional in the database
-        null=True,   # Allow NULL in the database
-        verbose_name="Pedagogic Level"
+        blank=True, 
+        verbose_name="Pedagogic Level",
+        help_text="User's current pedagogic level for tailored recommendations." # Added help text
     )
 
     # Linking interests directly to your 'Subject' model from the 'courses' app.

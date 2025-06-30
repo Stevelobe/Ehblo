@@ -1,0 +1,33 @@
+{# courses/templates/courses/partials/_recommended_courses_card.html #}
+{# This template receives 'recommended_courses' from the inclusion tag #}
+
+{% for recommended_course in recommended_courses %}
+<div class="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 hover:shadow-md transition duration-200">
+    <a href="{{ recommended_course.get_absolute_url }}">
+        {% if recommended_course.image %}
+            <img src="{{ recommended_course.image.url }}" alt="{{ recommended_course.title }}" class="w-full h-32 object-cover">
+        {% else %}
+            {# Placeholder if no image is uploaded for the course #}
+            <div class="w-full h-32 bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
+                No Course Image
+            </div>
+        {% endif %}
+    </a>
+    <div class="p-3">
+        <h4 class="font-semibold text-gray-800 text-md truncate mb-1">
+            <a href="{{ recommended_course.get_absolute_url }}" class="hover:text-blue-600">{{ recommended_course.title }}</a>
+        </h4>
+        <p class="text-sm text-gray-600 mb-2">By {{ recommended_course.instructor.username }}</p>
+        <div class="flex justify-between items-center text-sm">
+            <span class="text-blue-700 font-bold">
+                {% if recommended_course.price > 0 %}
+                    FCFA{{ recommended_course.price|floatformat:"2" }}
+                {% else %}
+                    Free
+                {% endif %}
+            </span>
+            <a href="{{ recommended_course.get_absolute_url }}" class="text-blue-600 hover:underline">View Course</a>
+        </div>
+    </div>
+</div>
+{% endfor %}
